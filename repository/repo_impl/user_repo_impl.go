@@ -37,10 +37,10 @@ func (u *UserRepoImpl) SaveUser(context context.Context, user model.User) (model
 		log.Error(err.Error())
 		if err, ok := err.(*pq.Error); ok {
 			if err.Code.Name() == "unique_violation" {
-				return user, banana.UserConflict
+				return user, banana.UserConflictText
 			}
 		}
-		return user, banana.SignUpFail
+		return user, banana.SignUpFailText
 	}
 	
 	return user, nil
@@ -52,7 +52,7 @@ func (u *UserRepoImpl) CheckLogin(context context.Context, loginReq req.ReqSignI
 	err := u.sql.Db.GetContext(context, &user, "SELECT * FROM users WHERE email=$1", loginReq.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return user, banana.UserNotFound
+			return user, banana.UserNotFoundText
 		}
 		log.Error(err.Error())
 		return user, err
@@ -67,10 +67,42 @@ func (u *UserRepoImpl) SelectUserById(context context.Context, userId string) (m
 	err := u.sql.Db.GetContext(context, &user, "SELECT * FROM users WHERE user_id = $1", userId)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return user, banana.UserNotFound
+			return user, banana.UserNotFoundText
 		}
 		log.Error(err.Error())
 		return user, err
+	}
+
+	return user, nil
+}
+
+func (u *UserRepoImpl) UpdateUser(context context.Context, user model.UserResponse) (model.UserResponse, error) {
+	statement := `
+		UPDATE users
+		SET 
+			full_name = (CASE WHEN LENGTH(:full_name) = 0 THEN full_name ELSE :full_name END),
+			email = (CASE WHEN LENGTH(:email) = 0 THEN email ELSE :email END),
+			updated_at = COALESCE(:updated_at, updated_at)
+		WHERE user_id = :user_id
+	`
+
+	user.UpdatedAt = time.Now()
+
+	
+	result, err := u.sql.Db.NamedExecContext(context, statement, user)
+	if err != nil {
+		log.Error(err.Error())
+		return user, err
+	}
+
+	count, err := result.RowsAffected()
+	if err != nil {
+		log.Error(err.Error())
+		return user, banana.UserNotUpdate
+	}
+
+	if count == 0 {
+		return user, banana.UserNotUpdate
 	}
 
 	return user, nil

@@ -21,5 +21,6 @@ func (api *API)SetupRouter() {
 	api.Echo.POST("/user/sign-up", api.UserHandler.HandleSignUp)
 
 	auth := api.Echo.Group("/auth", security.JWTMiddleware())
-	auth.GET("/profile", api.UserHandler.HandleProfile)
+	auth.POST("/profile", api.UserHandler.HandleProfile)
+	auth.POST("/profile/update", api.UserHandler.HandleUpdateProfile)
 }
