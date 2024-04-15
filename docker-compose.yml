@@ -1,0 +1,11 @@
+version: '25.0.3'
+
+services:
+  go-containerized:
+    container_name: go-containerized
+    build: .
+    image: go-containerized:latest
+    ports:
+      - 4000:4000
+    environment:
+      - APP_NAME=github
